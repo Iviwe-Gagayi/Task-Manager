@@ -2,6 +2,8 @@ require("dotenv").config();
 const Task = require("./models/Task");
 const express = require("express")
 const mongoose = require("mongoose");
+const User = require("./models/User");
+const { hashPassword } = require("./utils/auth");
 
 const app = express();
 
@@ -74,6 +76,31 @@ app.patch("/tasks/:id", async (req, res) => {
   }
 });
 
+//User registration
+
+app.post("/auth/register", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    // hash the password
+    const passwordHash = await hashPassword(password);
+
+    // create user
+    const user = new User({ email, passwordHash });
+    await user.save();
+
+    res.status(201).json(user); // thanks to our toJSON transform, passwordHash won't show
+  } catch (err) {
+    if (err.code === 11000) { // duplicate email
+      return res.status(409).json({ error: "Email already registered" });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 // Connecting to MongoDB
