@@ -4,6 +4,8 @@ const express = require("express")
 const mongoose = require("mongoose");
 const User = require("./models/User");
 const { hashPassword, comparePassword, signAccessToken } = require("./utils/auth");
+const authMiddleware = require("./middleware/auth");
+
 
 
 const app = express();
@@ -11,34 +13,34 @@ const app = express();
 //Middleware
 app.use(express.json());
 
-//testing saving of  a task
-app.post("/tasks", async (req, res) => {
+//post task
+app.post("/tasks", authMiddleware, async (req, res) => {
   try {
-    const task = new Task(req.body);   // Get data from request body
-    await task.save();                 // Save to MongoDB
-    res.status(201).json(task);        // Return saved task
+    const task = new Task({...req.body, user: req.user.id,});   
+    await task.save();                
+    res.status(201).json(task);      
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
 //get all tasks
-app.get("/tasks", async (req, res) => {
+app.get("/tasks",authMiddleware ,async (req, res) => {
   try {
-    const tasks = await Task.find();   // Fetch all tasks from MongoDB
-    res.json(tasks);                   // Send them back as JSON
+    const tasks = await Task.find({user: req.user.id,}).sort("-CreatedAt");   
+    res.json(tasks);                   
   } catch (err) {
-    res.status(500).json({ error: err.message }); // Error handler
+    res.status(500).json({ error: err.message }); 
   }
 });
 
 
 //Get task by ID
-app.get("/tasks/:id", async (req, res) => {
+app.get("/tasks/:id", authMiddleware ,async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id); // Find task by Mongo _id
+    const task = await Task.findById({_id: req.params.id,user: req.user.id,}).sort("-CreatedAt"); 
     if (!task) return res.status(404).json({ error: "Task not found" });
-    res.json(task);  // Send back the task
+    res.json(task);  
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -46,9 +48,9 @@ app.get("/tasks/:id", async (req, res) => {
 
 
 //Delete task
-app.delete("/tasks/:id", async (req,res) => {
+app.delete("/tasks/:id",authMiddleware,  async (req,res) => {
   try{
-  const task = await Task.findByIdAndDelete(req.params.id);
+  const task = await Task.findByIdAndDelete({ _id: req.params.id, user: req.user.id });
   if (!task){
     return res.status(404).json({ error: "Task not found" });
   }
@@ -59,12 +61,13 @@ app.delete("/tasks/:id", async (req,res) => {
 });
 
 //Patch
-app.patch("/tasks/:id", async (req, res) => {
+app.patch("/tasks/:id", authMiddleware, async (req, res) => {
   try {
     const task = await Task.findByIdAndUpdate(
-      req.params.id,
+      {_id: req.params.id, user: req.user.id},
       { $set: req.body },
       { new: true, runValidators: true }
+
     );
 
     if (!task) {
@@ -105,8 +108,6 @@ app.post("/auth/register", async (req, res) => {
 
 //user login
 app.post("/auth/login", async(req,res) => {
-
-
 try{
     const { email, password } = req.body || {};
     if (!email || !password) {
@@ -134,6 +135,8 @@ try{
   res.status(500).json({ error: err.message });
 }
 });
+
+
 
 
 // Connecting to MongoDB

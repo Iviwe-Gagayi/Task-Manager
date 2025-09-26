@@ -14,6 +14,13 @@ status:{
     default: "pending",
 },
 
+user:{
+type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true,
+},
+
 },{timestamps: true});
 
 module.exports = mongoose.model("Task",TaskSchema);
