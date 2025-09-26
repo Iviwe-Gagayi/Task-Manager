@@ -3,7 +3,8 @@ const Task = require("./models/Task");
 const express = require("express")
 const mongoose = require("mongoose");
 const User = require("./models/User");
-const { hashPassword } = require("./utils/auth");
+const { hashPassword, comparePassword, signAccessToken } = require("./utils/auth");
+
 
 const app = express();
 
@@ -93,13 +94,45 @@ app.post("/auth/register", async (req, res) => {
     const user = new User({ email, passwordHash });
     await user.save();
 
-    res.status(201).json(user); // thanks to our toJSON transform, passwordHash won't show
+    res.status(201).json(user); 
   } catch (err) {
-    if (err.code === 11000) { // duplicate email
+    if (err.code === 11000) { 
       return res.status(409).json({ error: "Email already registered" });
     }
     res.status(500).json({ error: err.message });
   }
+});
+
+//user login
+app.post("/auth/login", async(req,res) => {
+
+
+try{
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+     const user = await User.findOne({ email: String(email).toLowerCase() });
+    if (!user) {
+      
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+     const ok = await comparePassword(password, user.passwordHash);
+    if (!ok) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+     // Issue JWT
+    const token = signAccessToken(user);
+
+     res.json({
+      token, 
+      user: { _id: user._id, email: user.email, createdAt: user.createdAt }
+    });
+
+}catch(err){
+  res.status(500).json({ error: err.message });
+}
 });
 
 
