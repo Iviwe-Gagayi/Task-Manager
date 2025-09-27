@@ -11,6 +11,29 @@ const isId = (id) => Types.ObjectId.isValid(id);
 
 const app = express();
 
+
+const cors = require("cors");
+
+// allow your frontend origin
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173"; 
+
+app.use(cors({
+  origin: FRONTEND_URL,                
+  methods: ["GET","POST","PATCH","PUT","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization"],
+  credentials: false                    
+}));
+
+
+app.get("/health", (_req, res) => res.json({ status: "ok" }));
+const helmet = require("helmet");
+const morgan = require("morgan");
+
+app.use(helmet());                     
+if (process.env.NODE_ENV !== "production") {
+  app.use(morgan("dev"));               
+}
+
 //Middleware
 app.use(express.json());
 
@@ -145,15 +168,22 @@ try{
 
 
 
-
 // Connecting to MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.error("MongoDB connection error:", err));
-
-//starting server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, ()=> console.log(`Server running on port ${PORT}`));
+
+(async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 10000 });
+    console.log("MongoDB connected");
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);
+  }
+})();
 
 
 
