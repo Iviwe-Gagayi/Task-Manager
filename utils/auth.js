@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 
 const SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || "10", 10);
 const JWT_SECRET  = process.env.JWT_SECRET || "dev_secret_change_me";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "15m";
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "30d";
 
 // Password helpers
 async function hashPassword(plain) {
